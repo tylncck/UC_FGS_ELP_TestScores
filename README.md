@@ -1,84 +1,162 @@
-# Multinomial Analysis of ELP Tests and Cumulative GPA
+# ELP Test and Cumulative GPA Statistical Analysis
 
-* **Author:** Taylan Cicek
-* **Institution:** University of Calgary - Faculty of Graduate Studies
-* **Contact:** onurtaylan.cicek@ucalgary.ca
+- **Author:** Taylan Cicek
+- **Institution:** University of Calgary - Faculty of Graduate Studies
+- **Contact:** onurtaylan.cicek@ucalgary.ca
 
-Welcome to the analysis of student GPAs with respect to their English Language Proficiency (ELP) test submissions. This project aims to test if Cumulative GPA of students differ from each other with respect to the English Language Proficiency Tests they submitted. 
+This project analyzes the relationship between English Language Proficiency (ELP) test submissions and graduate student outcomes at the University of Calgary. It compares cumulative GPA and discontinuation rates across the most common ELP test categories and produces an exploratory Jupyter notebook report.
 
-## Table of Contents
+The main findings are observational. They do not establish that taking or requiring a particular ELP test causes a GPA or continuation outcome.
 
-- [Background](#background)
+## Contents
 
-- [Methodology](#methodology)
+- [Overview](#overview)
+- [Project structure](#project-structure)
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [SQL Server access](#sql-server-access)
+- [Running the analysis](#running-the-analysis)
+- [Methods](#methods)
+- [Reports](#reports)
+- [Limitations](#limitations)
 
-- [Installation](#installation)
+## Overview
 
-- [Usage](#usage)
+The notebook pulls graduate student enrollment and ELP test data from SQL Server, identifies the most recent ELP test recorded for each student, and groups students as IELTS, TOEFL, Duolingo, or "No Test" for the main comparison.
 
-- [Results](#results)
+The analysis evaluates:
 
-- [License](#license)
+- Differences in cumulative GPA across ELP test groups.
+- Differences in student discontinuation rates across ELP test groups.
+- Normality and homogeneity assumptions for parametric statistical tests.
+- Parametric and non-parametric GPA comparisons.
+- Pairwise discontinuation comparisons using Fisher's exact test.
 
-## Background
+## Project structure
 
-English language proficiency is a crucial factor for academic success, particularly in English-speaking educational institutions. As such, understanding the relationship between students' preference of ELP tests and their academic outcomes, such as GPAs, is of great importance. In this analysis, I aim to investigate whether there are significant differences in student GPAs based on the ELP test they submitted. The outcome will support the decision of continuation of some test types or not. 
+```text
+ELP_GPA_StatisticalTests.ipynb  Main analysis notebook
+requirements.txt                 Python dependencies
+scripts/
+  functions.py                   Data-pull and statistical helper functions
+  __init__.py                    Python package marker
+sql_queries/
+  AllTests.sql                   Extracts and categorizes recorded ELP tests
+  Query.sql                      Builds the analysis dataset
+reports/
+  *.html                         Exported notebook report
+  *.pdf                          Exported PDF reports
+.venv/                          Project virtual environment
+```
 
-## Methodology
+## Requirements
 
-### Data Preprosessing
+- Windows
+- Python 3.14.3 (the existing `.venv` was created with Python 3.14.3)
+- Microsoft ODBC Driver 17 for SQL Server
+- An active network connection and access to the University of Calgary data warehouse
+- Admin VPN connection
 
-Before implementing statistical tests, the dataset was preprocessed to ensure the validity of the analysis:
-- Outliers were identified and filtered out from the dataset to prevent their influence on the results.
-- Statistical tests were complemented with exploratory data analysis (EDA), including visualizations, to gain insights into the distribution and relationships of the variables.
+Python packages are listed in [requirements.txt](requirements.txt). The project uses pandas, SQLAlchemy, pyodbc, SciPy, Matplotlib, Plotly, Seaborn, pymssql, and Jupyter.
 
-### Testing Assumptions of ANOVA Test
+## Setup
 
-The analysis involved using ANOVA to compare means across multiple groups. ANOVA assumes the following:
+From the project root, activate the existing virtual environment:
 
-- Independence of observations: Each observation in the dataset is independent of others.
-- Normality: The dependent variable follows a normal distribution within each group.
-- Homogeneity of variances (homoscedasticity): The variance of the dependent variable is equal across all groups.
+```powershell
+.venv\Scripts\Activate.ps1
+```
 
-### Statistical Tests
+If you need to create a new environment, use a compatible Python installation:
 
-Statistical tests were conducted to assess differences in GPA distributions among the ELP test categories:
+```powershell
+py -3.14 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-- **Normality Test:** Shapiro-Wilk test was initially performed to assess the normality of GPA distributions within each ELP test category. The test was conducted both before and after applying Box-Cox transformation to the data.
-- **Homogeneity of Variances Test:** Bartlett test was conducted to assess the homogeneity of variances assumption required for ANOVA. 
-- **ANOVA Test:** ANOVA was initially planned to compare means across multiple ELP test categories. However, due to non-normality of GPA distributions parametric ANOVA was not appropriate. *Just to observe the outcome, ANOVA test, which was followed by pairwise Bonferroni corrected t-tests were implemented*
-- **Kruskal-Wallis Test:** Instead, Kruskal-Wallis test, a non-parametric alternative to ANOVA, was conducted to compare distributions across multiple groups.
-- **Post-hoc Pairwise Comparisons:** Following significant results from the Kruskal-Wallis test, post-hoc pairwise comparisons using Mann-Whitney U test were conducted to identify specific differences in GPAs between individual ELP test categories.
+Install Microsoft ODBC Driver 17 for SQL Server if it is not already available. The data-pull helper uses the Windows trusted connection and ODBC Driver 17:
 
-Additional statistical tests were implemented to determine if ELP Tests are associated with student's discontinuation to their programs. 
-- **Chi-Square Test of Independence** was not appropriate to the dataset due to violation of having at least 5 observation of failure. 
-- **Fisher's Exact Test** is more appropriate for datasets having small sample sizes. Therefore proportion comparisons were made using this test. 
+```text
+SERVER=ITAPPROREPP01
+DATABASE=UofC_DW_Student
+DRIVER=ODBC Driver 17 for SQL Server
+```
 
-## Installation
+## SQL Server access
 
-All required packages for this project are listed in the [requirements](requirements.txt) file and can be installed using the command `pip install -r requirements.txt` command. 
+**You must be connected to the organization Admin VPN to pull data from the SQL Server.**
 
-## Usage
+After connecting to the Admin VPN, run the notebook while signed into Windows with permissions to access `ITAPPROREPP01` and `UofC_DW_Student`. The project uses `Trusted_Connection=yes`; database credentials are not stored in the notebook or source files.
 
-It's important to note that the Jupyter notebook file relies on the SQL server for data retrieval. Therefore, proper authentication and VPN configurations are required to run the notebook and access the data. Ensure that the necessary credentials and network settings are in place before executing the notebook.
+Without the Admin VPN connection or the required SQL Server permissions, `data_pull()` will fail to connect.
 
-## Results
+## Running the analysis
 
-Mean and Median GPA comparisons resulted in:
+1. Connect to the Admin VPN.
+2. Open a PowerShell window in the project root.
+3. Activate the virtual environment:
 
-- The majority of students prefer taking the IELTS test, while TOEFL and Duolingo are relatively uncommon among students.
-- Cumulative GPA distribution of students does not adhere to a normal distribution even after Box-Cox transformation, precluding the use of parametric tests such as ANOVA.
-- The homogeneity of variance in GPA across test types was confirmed.
-- The Kruskal-Wallis test rejected the null hypothesis, indicating that at least one group has a different median compared to the others.
-- Subsequent Mann-Whitney U tests revealed that the four test types can be grouped into three categories:
-    - Group A: IELTS, with the lowest median GPA
-    - Group B: No test takers
-    - Group C: Tests indicate that TOEFL and Duolingo have equal median GPAs, being overall higher compared to others.
+   ```powershell
+   .venv\Scripts\Activate.ps1
+   ```
 
-Discontinuation Rate comparisons resulted in:
-- No test takers has the highest discontinuation rate and this association is statistically significant. 
-- Duolingo takers statistically have same proportions with other tests. Having only 2 discontinuation our of 100 makes the judgement for Duolingo a little bit unreliable. 
-- IELTS and TOEFL takers are the group having the lowest discontinuation rate.
+4. Start Jupyter:
 
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. The MIT License is a permissive open-source license that allows you to freely use, modify, and distribute this software for any purpose, with no warranty. By using or contributing to this project, you agree to abide by the terms of the MIT License.
+   ```powershell
+   jupyter notebook
+   ```
+
+5. Open `ELP_GPA_StatisticalTests.ipynb`.
+6. Run all cells from the beginning.
+
+The notebook loads [sql_queries/AllTests.sql](sql_queries/AllTests.sql) and [sql_queries/Query.sql](sql_queries/Query.sql) through `scripts/functions.py`.
+
+To run the notebook non-interactively:
+
+```powershell
+jupyter execute ELP_GPA_StatisticalTests.ipynb
+```
+
+## Methods
+
+### Data preparation
+
+The SQL queries:
+
+- Identify English proficiency test components recorded in `F_External_Tests`.
+- Keep the best recorded ELP result dated from 2020-01-01 onward.
+- Map test component codes to test names.
+- Select the latest ELP test for each student.
+- Identify cancellations or withdrawals for eligible international graduate students.
+- Join enrollment, cumulative GPA, discontinuation, and ELP test data.
+
+The Python helpers remove GPA outliers using an interquartile range rule, calculate descriptive summaries, and generate visualizations.
+
+### Statistical analysis
+
+The notebook uses:
+
+- Shapiro-Wilk tests for within-group normality.
+- Box-Cox transformation as a normality diagnostic.
+- Bartlett's test for homogeneity of variance.
+- ANOVA and Bonferroni-corrected pairwise t-tests as exploratory parametric checks.
+- Kruskal-Wallis and pairwise Mann-Whitney U tests as non-parametric alternatives.
+- Fisher's exact test for pairwise discontinuation rate comparisons.
+
+The main GPA analysis retains TOEFL, IELTS, Duolingo, and "No Test" and removes GPA outliers using the 1.5 x IQR rule.
+
+## Reports
+
+Generated HTML and PDF outputs are stored in [reports/](reports/).
+
+## Limitations
+
+- The analysis is exploratory and observational.
+- It does not control for academic program, country of origin, admission timing, prior study, or other potentially confounding variables.
+- Some ELP test categories have substantially more records than others.
+- Outlier removal and test-category filtering change the population represented in the statistical models.
+- Group distributions were non-normal, so interpret parametric ANOVA and t-test outputs cautiously.
+- Mann-Whitney U tests are unadjusted for multiple comparisons.
+- Fisher's exact pairwise tests are unadjusted and do not replace an omnibus analysis.
