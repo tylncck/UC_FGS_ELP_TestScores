@@ -260,13 +260,11 @@ def bar_plot(df, numeric_column, categoric_column, y_lim=(0, 4), data_labels=Fal
 
 
 def fisher_exact_test(summary_df, alpha, p_val_correction=True):
-    summary_df["Continuation"] = (
-        summary_df["Test_Count"] - summary_df["Discontinuation"]
-    )
-    n_groups = len(summary_df["TestName"].unique())
+    summary_df["Cont."] = summary_df["Count"] - summary_df["Disc."]
+    n_groups = len(summary_df["Test"].unique())
     n_comparisons = n_groups * (n_groups - 1) / 2
     adjusted_alpha = alpha / n_comparisons
-    summary_df.set_index("TestName", inplace=True)
+    summary_df.set_index("Test", inplace=True)
     test_combinations = combinations(summary_df.index, 2)
     result = ""
 
@@ -276,10 +274,8 @@ def fisher_exact_test(summary_df, alpha, p_val_correction=True):
         test_alpha = alpha
 
     for test1, test2 in test_combinations:
-        contingency_table = summary_df.loc[
-            [test1, test2], ["Discontinuation", "Continuation"]
-        ].values
-        odds_ratio, p_value = fisher_exact(contingency_table)
+        contingency_table = summary_df.loc[[test1, test2], ["Disc.", "Cont."]].values
+        _, p_value = fisher_exact(contingency_table)
         if p_value < test_alpha:
             result += f"- {test1} vs. {test2}: Different discontinuation rate (p_value = {p_value:.2f}, alpha = {test_alpha:#.4f})\n"
         else:
